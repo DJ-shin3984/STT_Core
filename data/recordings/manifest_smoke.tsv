@@ -1,0 +1,5 @@
+id	text	path	duration_sec	recorded_at	category	speed
+smoke0	그는 괜찮은 척하려고 애쓰는 것 같았다.	models/zipformer-korean-2024-06-16/test_wavs/0.wav	3.53	2026-10-08	general	normal
+smoke1	지하철에서 다리를 벌리고 앉지 마라.	models/zipformer-korean-2024-06-16/test_wavs/1.wav	3.40	2026-10-08	general	normal
+smoke2	부모가 저지르는 큰 실수 중 하나는 자기 아이를 다른 집 아이와 비교하는 것이다.	models/zipformer-korean-2024-06-16/test_wavs/2.wav	6.63	2026-10-08	general	normal
+smoke3	주민등록증을 보여 주시겠어요?	models/zipformer-korean-2024-06-16/test_wavs/3.wav	2.68	2026-10-08	general	normal

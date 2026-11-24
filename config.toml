@@ -1,0 +1,59 @@
+# 실시간 음성 입력 엔진 — 설정 (1단계)
+# 모델 교체는 이 파일만 바꾼다. 어댑터 종류(adapter)와 모델 이름(model)을 함께 지정한다.
+
+[audio]
+sample_rate = 16000
+chunk_ms = 20
+input_device = "2"         # "" = 기본 마이크. 이름 일부 또는 장치 번호 (python -m evaltools.record --list-devices)
+# 회사 PC(2026-10-08): 기본 장치 1번(Realtek 잭)은 무음. 2번 "마이크 배열(인텔 스마트 사운드, MME)"이 내장 마이크.
+
+[hotkeys]
+verbatim = "ctrl+alt+a"    # 단축키 A: 말한 그대로 + 오인식만 수정 (LLM 없음)
+polished = "ctrl+alt+b"    # 단축키 B: 군말 제거 + 문장 정리 (LLM, 1-4 전까지 A와 동일)
+
+[models]
+dir = "models"             # 다운로드된 모델 폴더
+
+[stt.streaming]            # 1차 인식 (말하는 중, 오버레이용)
+adapter = "sherpa_online"
+model = "nemotron-3.5-asr-streaming-0.6b-560ms-int8"   # 대조군: "zipformer-korean-2024-06-16"
+# 실측(2026-10-08, Core Ultra 7 155H CPU): 160ms 청크는 RTF 1.2~1.3으로 실시간 불가, 560ms는 RTF 0.6.
+# 집 PC(CUDA)에서는 "nemotron-3.5-asr-streaming-0.6b-160ms-int8"로 바꿔 1-1 게이트(첫 글자 300ms)를 잰다.
+provider = "cpu"           # cpu | cuda
+language = "ko"
+decoding = "greedy_search" # hotword를 쓰려면 "modified_beam_search" (Nemotron은 PR #3895 포함 빌드 필요)
+hotwords_score = 2.0
+
+[stt.final]                # 2차 인식 (발화 종료 후 전체 재인식, 커서 입력용)
+adapter = "sherpa_offline_qwen3asr"   # sherpa_offline_qwen3asr | qwen3asr_transformers | cohere_transformers
+model = "qwen3-asr-0.6b-int8"
+# 1.7B int8(약 2.4GB)은 GitHub 릴리스에 없고 modelscope(zengshuishui/Qwen3-ASR-onnx/model_1.7B)에서 수동으로 받아
+# models/qwen3-asr-1.7b-int8/ 에 둔다. 집 PC에서 1.7B로 바꿔 측정한다.
+provider = "cpu"
+language = "ko"
+
+[vocab]
+file = "data/vocab/terms.tsv"   # 비어 있으면 바이어싱 없이 시작 (착수 전 결정 사항)
+
+[llm]
+enabled_for = ["polished"]      # Verbatim 경로는 LLM을 쓰지 않는다
+gguf = ""                       # 1-4에서 지정
+timeout_ms = 800
+
+[log]
+dir = "data/log"
+max_mb = 2048                   # 수정 로그(오디오 포함) 디스크 상한
+
+[engine]
+deadline_verbatim_ms = 0        # 버튼 OFF → 커서 입력 완료 전체 deadline (만료 시 결과 폐기). 0 = 비활성
+deadline_polished_ms = 0        # 회사 PC(CPU)는 2차 재인식이 1초 넘게 걸려 0으로 둔다. 집 PC(GPU)는 700 / 1200
+stable_after = 3                # Partial 앞부분이 N번 연속 같으면 Stable 구간으로
+utterance_max_sec = 60          # PTT 발화 전체 버퍼 상한
+ring_sec = 30                   # 마이크 상시 링버퍼 (2단계용 + 프리롤)
+preroll_ms = 300                # PTT 누르기 직전 링버퍼 구간을 발화 앞에 붙임 (마이크만)
+second_pass = true              # false면 1차 flush 결과를 최종으로 씀 (구성 A0)
+
+[output]
+method = "clipboard"            # clipboard | none
+paste = true                    # false면 클립보드에만 복사 (테스트용)
+restore_delay_ms = 300
